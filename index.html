@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; img-src 'self' data: blob:; style-src 'self' 'unsafe-inline'; font-src 'self' data:; script-src 'self'; connect-src 'self' ws://localhost:5173"
+    />
+    <title>MooPress</title>
+    <link rel="icon" type="image/png" href="/build/icon.png" />
+    <link rel="stylesheet" href="/src/styles.css" />
+    <link rel="stylesheet" href="/src/features.css" />
+  </head>
+  <body>
+    <div id="app">
+      <header id="topbar">
+        <div class="qat" aria-label="Quick access">
+          <button class="icon-btn" data-action="save"><i data-lucide="save"></i></button>
+          <button class="icon-btn" data-action="undo"><i data-lucide="undo-2"></i></button>
+          <button class="icon-btn" data-action="redo"><i data-lucide="redo-2"></i></button>
+        </div>
+        <nav id="ribbon-tabs" role="tablist"></nav>
+        <div class="doc-status">
+          <span id="doc-name">Untitled Book</span>
+          <span id="save-state" class="save-state"></span>
+        </div>
+        <button class="icon-btn" id="ribbon-toggle" data-tip="Collapse the ribbon (double-click a tab also works)">
+          <i data-lucide="chevron-up"></i>
+        </button>
+        <div class="brand" title="MooPress">
+          <img class="brand-logo logo-img" id="brand-logo" alt="" />
+          <span class="brand-name">MooPress</span>
+        </div>
+      </header>
+
+      <section id="ribbon" role="toolbar"></section>
+
+      <main id="workspace">
+        <aside id="sidebar" aria-label="Book navigator"></aside>
+
+        <div id="canvas">
+          <div id="zoom-layer">
+            <article id="paper" class="paper">
+              <div class="hf-preview hf-header" id="header-preview"></div>
+              <div id="chapter-head">
+                <input id="chapter-title" placeholder="Chapter title" spellcheck="true" autocomplete="off" />
+              </div>
+              <div id="editor-mount"></div>
+              <div id="page-overlay" aria-hidden="true"></div>
+              <div class="hf-preview hf-footer" id="footer-preview"></div>
+            </article>
+
+            <article id="title-page" class="paper" hidden>
+              <div class="tp-inner">
+                <textarea id="tp-title" rows="1" placeholder="Book Title" spellcheck="true"></textarea>
+                <input id="tp-subtitle" placeholder="Subtitle (optional)" spellcheck="true" />
+                <div class="tp-by">by</div>
+                <input id="tp-author" placeholder="Author name" spellcheck="false" />
+                <label class="tp-dedication-label" for="tp-dedication">Dedication (optional)</label>
+                <textarea id="tp-dedication" rows="3" placeholder="For everyone who…" spellcheck="true"></textarea>
+                <p class="tp-hint">This page is printed first when you export or print your book.</p>
+              </div>
+            </article>
+          </div>
+        </div>
+
+        <aside id="side-panel" hidden aria-label="Tools panel"></aside>
+      </main>
+
+      <footer id="statusbar"></footer>
+    </div>
+
+    <div id="settings-page" hidden></div>
+    <div id="popover-root"></div>
+    <div id="modal-root"></div>
+    <div id="tooltip" role="tooltip" hidden></div>
+    <div id="toasts" aria-live="polite"></div>
+
+    <script type="module" src="/src/main.js"></script>
+  </body>
+</html>
