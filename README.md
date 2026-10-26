@@ -1,6 +1,6 @@
 # MooPress™
 
-<img width="2172" height="724" alt="MOOPRESS Color Logo with Text" src="https://github.com/user-attachments/assets/0f53f565-332b-467c-90b2-5c57ce648045" />
+<img width="2172" height="724" alt="MOOPRESS Color Logo with Texts" src="https://github.com/user-attachments/assets/39db102d-dfbd-48ce-ae22-ac10d3796ba8" />
 
 
 A simple word processor for book authors on Windows. Write your book chapter by chapter, set it up at real book sizes (like 6" × 9"), and export a print ready PDF with page numbers and headers. Every keyboard shortcut can be changed in Settings as requested by a colleague :)
