@@ -1,5 +1,7 @@
 # MooPress™
 
+<img width="2172" height="724" alt="MOOPRESS Color Logo with Text" src="https://github.com/user-attachments/assets/5392cd9b-9d3f-445d-adec-a98fe3311995" />
+
 A simple word processor for book authors on Windows. Write your book chapter by chapter, set it up at real book sizes (like 6" × 9"), and export a print ready PDF with page numbers and headers. Every keyboard shortcut can be changed in Settings as requested by a colleague :)
 
 It also comes with writing tools to make things easier for you: double click a word for synonyms, slash commands: type `/sig` or `/chapter` to drop in saved text, a Time Machine to bring back deleted paragraphs, Story Settings cards for your characters and places
