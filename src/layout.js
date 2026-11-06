@@ -1,4 +1,4 @@
-import { app, h, emit, markDirty, debounce } from './app.js';
+import { app, h, emit, markDirty, debounce, on } from './app.js';
 import {
   PX_PER_INCH, PAGE_SIZES, MARGIN_PRESETS, FONT_CHOICES, PAGE_NUMBER_FORMATS,
   pageDims, fillTokens, pageNumberText,
@@ -22,18 +22,24 @@ export function applyLayout() {
   const L = layout();
   const { w, h: ph } = pageDims(L);
   const m = L.margins;
-  for (const paper of [$('paper'), $('title-page')]) {
+  for (const paper of document.querySelectorAll('.chapter-paper, #title-page')) {
     paper.style.width = `${w * PX_PER_INCH}px`;
     paper.style.minHeight = `${ph * PX_PER_INCH}px`;
     paper.style.padding = `${m.top * PX_PER_INCH}px ${m.right * PX_PER_INCH}px ${m.bottom * PX_PER_INCH}px ${m.left * PX_PER_INCH}px`;
   }
-  const doc = $('paper');
-  doc.style.setProperty('--body-font', fontStack(L.fontFamily));
-  doc.style.setProperty('--body-size', `${L.fontSize}pt`);
-  doc.style.setProperty('--body-leading', L.lineHeight);
-  doc.style.setProperty('--columns', L.columns);
-  doc.classList.toggle('para-book', L.paragraphStyle === 'book');
-  doc.classList.toggle('para-block', L.paragraphStyle === 'block');
+  for (const doc of document.querySelectorAll('.chapter-paper')) {
+    doc.style.setProperty('--body-font', fontStack(L.fontFamily));
+    doc.style.setProperty('--body-size', `${L.fontSize}pt`);
+    doc.style.setProperty('--body-leading', L.lineHeight);
+    doc.style.setProperty('--columns', L.columns);
+    doc.classList.toggle('para-book', L.paragraphStyle === 'book');
+    doc.classList.toggle('para-block', L.paragraphStyle === 'block');
+    doc.style.setProperty('--watermark-color', L.watermark.color);
+    doc.style.setProperty('--watermark-opacity', L.watermark.opacity);
+    doc.style.setProperty('--watermark-angle', `${L.watermark.angle}deg`);
+    doc.style.setProperty('--watermark-size', `${L.watermark.size}pt`);
+    doc.dataset.watermark = L.watermark.text;
+  }
   $('title-page').style.setProperty('--body-font', fontStack(L.fontFamily));
   renderHeaderFooter();
   schedulePageGuides();
@@ -45,16 +51,48 @@ export function fontStack(name) {
   return `"${name}", ${fallback}`;
 }
 
-function renderHeaderFooter(totalPages = 1) {
+function renderHeaderFooter() {
   const L = layout();
   const m = L.margins;
-  const header = $('header-preview');
-  const footer = $('footer-preview');
-  const parts = hfParts(L, totalPages);
-  header.replaceChildren(...['left', 'center', 'right'].map((a) => h(`span.hf-${a}`, {}, parts.header[a])));
-  footer.replaceChildren(...['left', 'center', 'right'].map((a) => h(`span.hf-${a}`, {}, parts.footer[a])));
-  header.style.cssText = `top:0; height:${m.top * PX_PER_INCH}px; left:${m.left * PX_PER_INCH}px; right:${m.right * PX_PER_INCH}px`;
-  footer.style.cssText = `bottom:0; height:${m.bottom * PX_PER_INCH}px; left:${m.left * PX_PER_INCH}px; right:${m.right * PX_PER_INCH}px`;
+  const papers = [...document.querySelectorAll('.chapter-paper')];
+  const counts = papers.map((paper) => measureChapter(paper).count);
+  let offset = L.includeTitlePage ? 1 + (app.project.dedication.trim() ? 1 : 0) : 0;
+  const totalPages = offset + counts.reduce((sum, count) => sum + count, 0);
+  for (const [index, paper] of papers.entries()) {
+    const header = paper.querySelector('.hf-header');
+    const footer = paper.querySelector('.hf-footer');
+    const headerParts = hfParts(L, totalPages, offset + 1);
+    const footerParts = hfParts(L, totalPages, offset + counts[index]);
+    header.replaceChildren(...['left', 'center', 'right'].map((a) => h(`span.hf-${a}`, {}, headerParts.header[a])));
+    footer.replaceChildren(...['left', 'center', 'right'].map((a) => h(`span.hf-${a}`, {}, footerParts.footer[a])));
+    header.style.cssText = `top:0; height:${m.top * PX_PER_INCH}px; left:${m.left * PX_PER_INCH}px; right:${m.right * PX_PER_INCH}px`;
+    footer.style.cssText = `bottom:0; height:${m.bottom * PX_PER_INCH}px; left:${m.left * PX_PER_INCH}px; right:${m.right * PX_PER_INCH}px`;
+    offset += counts[index];
+  }
+}
+
+function measureChapter(paper) {
+  const L = layout();
+  const contentH = Math.max(40, (pageDims(L).h - L.margins.top - L.margins.bottom) * PX_PER_INCH);
+  const padTop = L.margins.top * PX_PER_INCH;
+  const rect = paper.getBoundingClientRect();
+  const scale = rect.width / paper.offsetWidth || 1;
+  const pm = paper.querySelector('.ProseMirror') || paper.querySelector('.chapter-preview');
+  if (!pm) return { count: 1, marks: [], end: padTop };
+  const bottom = (el) => (el.getBoundingClientRect().bottom - rect.top) / scale;
+  const notes = paper.querySelector('.chapter-notes');
+  const contentEnd = Math.max(bottom(pm), notes && !notes.hidden ? bottom(notes) : 0);
+  const breaks = [...pm.querySelectorAll(':scope > .page-break')].map(bottom);
+  const marks = [];
+  let segment = padTop;
+  for (const point of [...breaks, Infinity]) {
+    const end = Math.min(point, contentEnd);
+    while (segment + contentH < end) { segment += contentH; marks.push({ y: segment, forced: false }); }
+    if (point === Infinity || point > contentEnd) break;
+    segment = point;
+    marks.push({ y: point, forced: true });
+  }
+  return { count: marks.length + 1, marks, end: segment + contentH + L.margins.bottom * PX_PER_INCH };
 }
 
 export function hfParts(L, totalPages, page = 1) {
@@ -78,47 +116,24 @@ export let currentPage = 1;
 export const schedulePageGuides = debounce(drawPageGuides, 120);
 
 function drawPageGuides() {
-  const paper = $('paper');
-  const overlay = $('page-overlay');
-  if (!app.project || paper.hidden) return;
+  if (!app.project) return;
   const L = layout();
   const { h: pageH } = pageDims(L);
-  const padTop = L.margins.top * PX_PER_INCH;
-  const padBottom = L.margins.bottom * PX_PER_INCH;
   const contentH = (pageH - L.margins.top - L.margins.bottom) * PX_PER_INCH;
-  const pm = paper.querySelector('.ProseMirror');
-  if (!pm || contentH <= 40) return;
-
-  const contentEnd = pm.offsetTop + pm.offsetHeight;
-  const breaks = [...pm.querySelectorAll(':scope > .page-break')].map((el) => el.offsetTop + el.offsetHeight);
-  const marks = [];
-  let segStart = padTop;
-  for (const b of [...breaks, Infinity]) {
-    const end = Math.min(b, contentEnd);
-    while (segStart + contentH < end) {
-      segStart += contentH;
-      marks.push({ y: segStart, forced: false });
+  if (contentH <= 40) return;
+  for (const paper of document.querySelectorAll('.chapter-paper')) {
+    const measured = measureChapter(paper);
+    if (paper.id === 'paper') pageCount = measured.count;
+    paper.style.minHeight = `${Math.max(pageH * PX_PER_INCH, measured.end)}px`;
+    const overlay = paper.querySelector('.page-overlay');
+    overlay.replaceChildren();
+    if (app.settings.showPageGuides) {
+      measured.marks.forEach((mk, i) => {
+        overlay.append(h(`div.page-guide${mk.forced ? '.forced' : ''}`, { style: { top: `${mk.y}px` } }, h('span.page-guide-label', {}, `Page ${i + 2}`)));
+      });
     }
-    if (b === Infinity || b > contentEnd) break;
-    segStart = b;
-    marks.push({ y: b, forced: true });
   }
-  pageCount = marks.length + 1;
-  paper.style.minHeight = `${Math.max(pageH * PX_PER_INCH, segStart + contentH + padBottom)}px`;
-
-  overlay.replaceChildren();
-  if (app.settings.showPageGuides) {
-    marks.forEach((mk, i) => {
-      overlay.append(
-        h(
-          `div.page-guide${mk.forced ? '.forced' : ''}`,
-          { style: { top: `${mk.y}px` } },
-          h('span.page-guide-label', {}, `Page ${i + 2}`),
-        ),
-      );
-    });
-  }
-  renderHeaderFooter(pageCount);
+  renderHeaderFooter();
   updateCurrentPage();
   emit('pages-changed');
 }
@@ -127,6 +142,7 @@ export function updateCurrentPage() {
   const { editor } = app;
   if (!editor || !app.view || app.view === 'title') return;
   const paper = $('paper');
+  if (!paper) return;
   const L = layout();
   const contentH = (pageDims(L).h - L.margins.top - L.margins.bottom) * PX_PER_INCH;
   try {
@@ -278,3 +294,4 @@ export function pageNumbersMenu(anchor) {
 }
 
 export const BODY_FONTS = FONT_CHOICES;
+on('manuscript-rendered', applyLayout);

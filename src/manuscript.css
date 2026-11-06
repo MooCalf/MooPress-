@@ -1,0 +1,37 @@
+.chapter-paper, #title-page { margin-bottom: 32px; flex-shrink: 0; }
+.chapter-paper.active-chapter { outline: 1px solid color-mix(in srgb, var(--accent) 24%, transparent); }
+.chapter-preview { cursor: text; }
+.chapter-paper::before {
+  content: attr(data-watermark); position: absolute; left: 50%; top: 50%;
+  transform: translate(-50%, -50%) rotate(var(--watermark-angle, -35deg));
+  color: var(--watermark-color, #9b948a); opacity: var(--watermark-opacity, 0.12);
+  font-size: var(--watermark-size, 60pt); line-height: 1; white-space: nowrap; pointer-events: none;
+}
+.chapter-paper > :not(.hf-preview, .page-overlay) { position: relative; }
+.title-art { padding: 0; margin-top: 12px; margin-bottom: 20px; text-align: center; }
+.title-art img { display: block; width: 100%; max-width: 100%; max-height: 330px; object-fit: contain; margin: auto; }
+.title-art-button { display: block; width: 100%; padding: 0; border: 0; background: transparent; cursor: pointer; }
+.title-art-button:hover { outline: 2px solid var(--accent); outline-offset: 4px; }
+.title-art figcaption { font-size: 10pt; margin-top: 6px; white-space: pre-wrap; }
+.title-art-edit { margin-top: 8px; opacity: 0; transition: opacity 0.15s; }
+.title-art:hover .title-art-edit, .title-art:focus-within .title-art-edit { opacity: 1; }
+.title-art-preview { max-height: 180px; max-width: 100%; display: block; margin: 0 auto 16px; }
+#tp-art-above, #tp-art-below { width: 100%; }
+.tp-add-picture { margin: 20px auto 0; }
+.book-element { padding: 8px 4px; border: 1px dashed transparent; border-radius: 4px; cursor: pointer; }
+.book-element:hover { border-color: #ccc5bc; }
+.book-element.ProseMirror-selectednode, .book-element:focus-visible { outline: 2px solid var(--accent); }
+.book-contents { margin: 12px 0 24px; }
+.book-contents h2 { font-size: 1.5em; margin-top: 0; }
+.book-contents ol { padding: 0; margin: 0; list-style: none; }
+.book-contents li { padding: 4px 0; }
+.book-contents a { text-decoration: none; }
+.manuscript .inline-caption { text-indent: 0; margin: 4px 0 12px; white-space: pre-wrap; }
+.element-preview { margin-top: 18px; padding: 16px; max-height: 220px; overflow: auto; background: var(--paper); color: var(--paper-ink); font-family: Georgia, serif; font-weight: 400; border: 1px solid var(--border); border-radius: 6px; }
+.footnote-reference { color: #1b4f8f; font-size: 0.75em; cursor: pointer; margin: 0 2px; }
+.chapter-notes { margin-top: 28px; padding-top: 10px; border-top: 1px solid #bbb4ac; }
+.chapter-note { display: block; border: 0; padding: 4px 0; margin: 0; background: transparent; color: inherit; font: 400 10pt var(--body-font, Georgia, serif); text-align: left; white-space: pre-wrap; width: 100%; cursor: pointer; }
+.chapter-note:hover { color: var(--accent); }
+@media (prefers-reduced-motion: reduce) {
+  .radial-item, .radial-centre, .radial-menu { transition-duration: 0.01ms !important; transition-delay: 0ms !important; }
+}

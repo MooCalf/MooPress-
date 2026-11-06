@@ -3,7 +3,8 @@ import { defineAction } from './keybinds.js';
 import { withEditor } from './editor.js';
 import { FONT_SIZES } from './project.js';
 import { newBook, openBook, saveBook, exportPdf, exportHtml, printBook } from './fileops.js';
-import { insertPicture, linkDialog, shapeDialog, chartDialog } from './insert.js';
+import { insertPicture, linkDialog, shapeDialog, chartDialog, customTableDialog } from './insert.js';
+import { elementDialog, footnoteDialog, watermarkDialog, editSelectedElement, tableOptionsDialog } from './pageElements.js';
 import { DEFAULT_SHAPE, DEFAULT_CHART } from './graphics.js';
 import { headerFooterDialog, updateLayout } from './layout.js';
 import { openFind } from './find.js';
@@ -96,10 +97,17 @@ export function registerActions() {
 
   A({ id: 'pageBreak', label: 'Page break', category: 'Insert', defaultKey: 'Ctrl+Enter', run: () => withEditor((c) => c.setPageBreak().run()), description: 'Start a new page at the cursor.' });
   A({ id: 'sceneBreak', label: 'Scene break', category: 'Insert', defaultKey: 'Ctrl+Shift+Enter', run: () => withEditor((c) => c.setSceneBreak().run()), description: 'Insert a centred “* * *” to mark a change of scene.' });
-  A({ id: 'picture', label: 'Picture…', category: 'Insert', run: insertPicture, description: 'Insert a picture from your computer. You can also paste or drag one in.' });
+  A({ id: 'picture', label: 'Picture…', category: 'Insert', scope: 'global', run: insertPicture, description: 'Insert a picture on the title page or in the active chapter. You can also paste or drag one in.' });
   A({ id: 'shape', label: 'Shape…', category: 'Insert', run: () => inChapter() && shapeDialog(DEFAULT_SHAPE), description: 'Insert a shape such as a box, star, arrow or speech bubble.' });
   A({ id: 'chart', label: 'Chart…', category: 'Insert', run: () => inChapter() && chartDialog(DEFAULT_CHART), description: 'Insert a bar, line or pie chart from your own numbers.' });
-  A({ id: 'table', label: 'Table', category: 'Insert', run: () => withEditor((c) => c.insertTable({ rows: 3, cols: 3, withHeaderRow: true }).run()), description: 'Insert a table to organise information in rows and columns.' });
+  A({ id: 'table', label: 'Table…', category: 'Insert', run: customTableDialog, description: 'Choose rows, columns and a header row for a new table.' });
+  A({ id: 'tableOptions', label: 'Table appearance…', category: 'Insert', run: tableOptionsDialog });
+  A({ id: 'tableOfContents', label: 'Table of contents…', category: 'Insert', run: () => elementDialog('toc') });
+  A({ id: 'caption', label: 'Inline caption…', category: 'Insert', run: () => elementDialog('caption') });
+  A({ id: 'footnote', label: 'Footnote…', category: 'Insert', run: () => footnoteDialog() });
+  A({ id: 'editElement', label: 'Edit page element…', category: 'Insert', run: editSelectedElement });
+  A({ id: 'watermark', label: 'Watermark…', category: 'Layout', scope: 'global', run: watermarkDialog });
+  A({ id: 'pageNumbers', label: 'Page numbers…', category: 'Layout', scope: 'global', run: headerFooterDialog });
   A({ id: 'link', label: 'Link…', category: 'Insert', defaultKey: 'Ctrl+K', run: linkDialog, isActive: active('link'), description: 'Link text to a web page.' });
 
   A({ id: 'snippetHelp', label: 'Snippets…', category: 'Insert', scope: 'global', run: () => openSettings('snippets'), description: 'Type / and a trigger like /sig in your text to insert a saved block. Manage them here.' });

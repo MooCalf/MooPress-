@@ -19,12 +19,12 @@ const STEPS = [
   {
     target: '#sidebar .chapter-list',
     title: 'Chapters',
-    body: 'Your book is split into chapters. Add one with the + button, drag chapters to reorder them, and double-click a name to rename it.',
+    body: 'Click a chapter once to jump to it, or keep scrolling through your whole book. Add one with the + button, drag chapters to reorder them, and double-click a name to rename it.',
   },
   {
     target: '#sidebar .title-item',
     title: 'Title page',
-    body: 'Set your title, subtitle, author name and dedication. It’s printed first whenever you export or print your book.',
+    body: 'Your book opens here. Set your title, subtitle, author name and dedication, then add pictures with the picture button or by dropping them onto the page. Click a picture to edit it.',
   },
   {
     target: '#paper',
@@ -154,6 +154,8 @@ function place() {
 
 function render() {
   const step = STEPS[tour.index];
+  if (step.target === '#paper' && app.view === 'title') openView(app.project.chapters[0].id);
+  if (step.target === '#sidebar .title-item') openView('title');
   const total = STEPS.length;
   if (step.tab) selectTab(step.tab);
   const back = h('button.btn', { onclick: () => go(-1), disabled: tour.index === 0 }, 'Back');
@@ -198,7 +200,6 @@ function onKey(e) {
 
 export function startTour() {
   if (tour) return;
-  if (app.view === 'title' && app.project.chapters[0]) openView(app.project.chapters[0].id);
   if (!app.settings.sidebarVisible) setSetting('sidebarVisible', true);
   if (app.settings.ribbonCollapsed) setSetting('ribbonCollapsed', false);
   document.body.classList.remove('focus-mode', 'zen');
@@ -206,7 +207,7 @@ export function startTour() {
   const cardEl = h('div.tour-card', { role: 'dialog', 'aria-label': 'MooPress tour' });
   const el = h('div.tour', {}, spot, cardEl);
   document.body.append(el);
-  tour = { el, spot, cardEl, index: 0, tab: null };
+  tour = { el, spot, cardEl, index: 0, tab: null, initialView: app.view };
   document.addEventListener('keydown', onKey, true);
   window.addEventListener('resize', place);
   render();
@@ -215,13 +216,14 @@ export function startTour() {
 
 function end() {
   if (!tour) return;
-  const { el } = tour;
+  const { el, initialView } = tour;
   tour = null;
   el.classList.remove('show');
   setTimeout(() => el.remove(), 200);
   document.removeEventListener('keydown', onKey, true);
   window.removeEventListener('resize', place);
   setSetting('tourDone', true);
+  openView(initialView);
   selectTab('home');
   app.editor?.commands.focus();
 }

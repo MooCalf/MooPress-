@@ -5,12 +5,13 @@ import { blockText } from '../extensions/decorations.js';
 import { getSpeller, normalizeWord, suggestionsFor, rememberWord } from '../spelling.js';
 import { closePopover, refreshIcons, toast } from '../ui.js';
 import { isBibleWord } from './bible.js';
-import { TOOLS, moreMenu } from './tools.js';
+import { TOOLS, MORE_TOOLS } from './tools.js';
 import { dockPalette, undockPalette, measurePalette } from './focusPalette.js';
 
 const RADIUS = 86;
 const ITEM_SIZE = 46;
 const RETURN_MS = 250;
+const OUTER_RADIUS = 168;
 
 let menu = null;
 
@@ -19,7 +20,7 @@ export function closeRadial() {
   const { el, docked, cx, cy } = menu;
   if (docked) {
     const { slots, more } = measurePalette();
-    el.querySelectorAll('.radial-item').forEach((b, i) => {
+    el.querySelectorAll('.radial-item:not(.radial-outer)').forEach((b, i) => {
       b.style.setProperty('--sx', `${slots[i].x - cx}px`);
       b.style.setProperty('--sy', `${slots[i].y - cy}px`);
     });
@@ -28,6 +29,7 @@ export function closeRadial() {
     c.style.setProperty('--sy', `${more.y - cy}px`);
   }
   el.classList.remove('show');
+  el.classList.remove('expanded');
   el.classList.add('closing');
   setTimeout(() => {
     el.remove();
@@ -87,7 +89,36 @@ function open(x, y, clickPos, dock) {
     el.append(btn);
   });
   centre.addEventListener('mouseenter', () => { label.textContent = 'More…'; });
-  centre.addEventListener('click', () => moreMenu(centre, closeRadial));
+  centre.setAttribute('aria-expanded', 'false');
+  centre.addEventListener('click', () => {
+    const expanded = !el.classList.contains('expanded');
+    if (expanded && !el.querySelector('.radial-outer')) {
+      const extra = MORE_TOOLS.filter(([id]) => actions.has(id));
+      extra.forEach(([id, iconName], i) => {
+        const action = actions.get(id);
+        const angle = i / extra.length * Math.PI * 2 - Math.PI / 2;
+        const button = h('button.radial-item.radial-outer', {
+          role: 'menuitem', 'aria-label': action.label, title: action.label,
+          style: { '--x': `${Math.cos(angle) * OUTER_RADIUS}px`, '--y': `${Math.sin(angle) * OUTER_RADIUS}px`, '--i': i % 8, '--sx': '0px', '--sy': '0px', '--ss': 0.4, '--so': 0 },
+        }, icon(iconName));
+        button.addEventListener('mouseenter', () => { label.textContent = action.label; });
+        button.addEventListener('focus', () => { label.textContent = action.label; });
+        button.addEventListener('click', () => { closeRadial(); runAction(id); });
+        el.append(button);
+      });
+      refreshIcons(el);
+      void el.offsetWidth;
+    }
+    const padding = expanded ? OUTER_RADIUS + 42 : RADIUS + 34;
+    const centerX = Math.max(padding, Math.min(x, window.innerWidth - padding));
+    const centerY = Math.max(padding, Math.min(y, window.innerHeight - padding));
+    Object.assign(el.style, { left: `${centerX}px`, top: `${centerY}px` });
+    menu.cx = centerX; menu.cy = centerY;
+    el.classList.toggle('expanded', expanded);
+    centre.setAttribute('aria-expanded', String(expanded));
+    for (const button of el.querySelectorAll('.radial-outer')) button.tabIndex = expanded ? 0 : -1;
+    label.textContent = expanded ? 'More tools · click the center to collapse' : 'More…';
+  });
   el.addEventListener('mouseleave', () => { label.textContent = 'Right-click menu'; });
 
   Object.assign(el.style, { left: `${cx}px`, top: `${cy}px` });
@@ -107,6 +138,13 @@ function open(x, y, clickPos, dock) {
       e.stopPropagation();
       closePopover();
       closeRadial();
+    } else if (['ArrowRight', 'ArrowDown', 'ArrowLeft', 'ArrowUp', 'Home', 'End'].includes(e.key)) {
+      e.preventDefault();
+      const buttons = [...el.querySelectorAll('button')].filter((button) => !button.classList.contains('radial-outer') || el.classList.contains('expanded'));
+      const current = buttons.indexOf(document.activeElement);
+      const step = e.key === 'ArrowLeft' || e.key === 'ArrowUp' ? -1 : 1;
+      const next = e.key === 'Home' ? 0 : e.key === 'End' ? buttons.length - 1 : (current + step + buttons.length) % buttons.length;
+      buttons[next]?.focus();
     }
   };
   document.addEventListener('mousedown', outside, true);
@@ -143,7 +181,7 @@ async function addSpelling(el, pos) {
 }
 
 export function initRadialMenu() {
-  document.getElementById('paper').addEventListener('contextmenu', (e) => {
+  document.getElementById('canvas').addEventListener('contextmenu', (e) => {
     if (!app.settings.radialMenu || e.shiftKey || !app.editor.view.dom.contains(e.target)) return;
     e.preventDefault();
     e.stopPropagation();

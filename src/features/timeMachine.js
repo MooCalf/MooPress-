@@ -70,7 +70,7 @@ export function openTimeMachine() {
   const paperSrc = document.getElementById('paper');
   const content = h('div.manuscript.tm-content');
   const paper = h('article.paper', { id: 'tm-paper', style: paperSrc.getAttribute('style') || '' }, h('div.tm-chapter-title', {}, activeChapter()?.title || ''), content);
-  paper.className = `${paperSrc.className} tm-paper`;
+  paper.className = `${paperSrc.className.replace(/\bchapter-paper\b|\bactive-chapter\b/g, '')} tm-paper`;
   paperSrc.hidden = true;
   paperSrc.after(paper);
   document.getElementById('canvas').prepend(bar);
@@ -89,12 +89,13 @@ export function closeTimeMachine() {
   if (!ui) return;
   ui.bar.remove();
   document.getElementById('tm-paper')?.remove();
-  document.getElementById('paper').hidden = app.view === 'title';
+  const paper = document.getElementById('paper');
+  if (paper) paper.hidden = false;
   document.body.classList.remove('time-machine');
   document.removeEventListener('keydown', escClose, true);
   ui = null;
   emit('time-machine-changed');
-  app.editor.commands.focus();
+  if (app.view !== 'title') app.editor.commands.focus();
 }
 
 function escClose(e) {

@@ -4,9 +4,11 @@ import { openDialog, popover, closePopover, field, toast, refreshIcons } from '.
 import { SHAPES, DEFAULT_SHAPE, shapeSvg, CHART_TYPES, CHART_PALETTES, DEFAULT_CHART, chartSvg, svgDataUrl } from './graphics.js';
 import { selectedImage } from './extensions/bookImage.js';
 import { SCENE_SYMBOLS } from './extensions/breaks.js';
+import { addTitlePicture } from './titleArtwork.js';
 
 export async function insertPicture() {
-  if (!app.view || app.view === 'title') return toast('Open a chapter first, then insert your picture.', 'info');
+  if (app.view === 'title') return addTitlePicture();
+  if (!app.view) return;
   const img = await window.moopress.pickImage();
   if (!img) return;
   if (img.size > 8 * 1024 * 1024) toast('That picture is large and will make your book file bigger. Consider resizing it first.', 'warn', 6000);
@@ -50,16 +52,18 @@ function insertTable(rows, cols) {
   withEditor((c) => c.insertTable({ rows, cols, withHeaderRow: true }).run());
 }
 
-async function customTableDialog() {
+export async function customTableDialog() {
+  if (app.view === 'title') return toast('Click a chapter to insert a table there.', 'info');
   const rows = h('input.field', { type: 'number', min: 1, max: 100, value: 4 });
   const cols = h('input.field', { type: 'number', min: 1, max: 20, value: 3 });
+  const header = h('input', { type: 'checkbox', checked: true });
   const r = await openDialog({
     title: 'Insert table',
     width: 340,
-    body: h('div.form-grid', {}, field('Columns', cols), field('Rows', rows)),
+    body: h('div', {}, h('div.form-grid', {}, field('Columns', cols), field('Rows', rows)), h('label.check', {}, header, 'Include a header row')),
     buttons: [{ label: 'Cancel', value: null }, { label: 'Insert', value: true, primary: true }],
   });
-  if (r) insertTable(Math.max(1, Math.min(100, +rows.value || 1)), Math.max(1, Math.min(20, +cols.value || 1)));
+  if (r) withEditor((c) => c.insertTable({ rows: Math.max(1, Math.min(100, +rows.value || 1)), cols: Math.max(1, Math.min(20, +cols.value || 1)), withHeaderRow: header.checked }).run());
 }
 
 export function shapePicker(anchor) {

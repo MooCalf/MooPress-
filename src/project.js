@@ -54,6 +54,7 @@ export function defaultLayout() {
     header: { text: '{title}', align: 'center' },
     footer: { text: '', align: 'center' },
     pageNumbers: { show: true, position: 'footer-center', format: 'n' },
+    watermark: { text: '', color: '#9b948a', opacity: 0.12, angle: -35, size: 60 },
   };
 }
 
@@ -64,6 +65,7 @@ export function createProject() {
     subtitle: '',
     author: '',
     dedication: '',
+    titleImages: [],
     layout: defaultLayout(),
     chapters: [newChapter('Chapter 1')],
     ignoredWords: [],
@@ -79,6 +81,8 @@ export function normalizeProject(data) {
   p.layout.header = { ...base.layout.header, ...(data.layout?.header || {}) };
   p.layout.footer = { ...base.layout.footer, ...(data.layout?.footer || {}) };
   p.layout.pageNumbers = { ...base.layout.pageNumbers, ...(data.layout?.pageNumbers || {}) };
+  p.layout.watermark = { ...base.layout.watermark, ...(data.layout?.watermark || {}) };
+  p.titleImages = Array.isArray(data.titleImages) ? data.titleImages.filter((image) => image && typeof image.src === 'string') : [];
   if (!Array.isArray(p.chapters) || !p.chapters.length) p.chapters = base.chapters;
   p.chapters = p.chapters.map((c, i) => ({ id: c.id || uid(), title: c.title ?? `Chapter ${i + 1}`, content: c.content || EMPTY_DOC }));
   if (!Array.isArray(p.ignoredWords)) p.ignoredWords = [];

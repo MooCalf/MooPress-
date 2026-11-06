@@ -166,6 +166,7 @@ function buildInsert() {
       large('chart', 'bar-chart-3', 'Chart'),
     ),
     group('Tables', large(null, 'table', 'Table', { menu: true, tip: 'Table', desc: 'Pick a size from the grid to insert a table.', onClick: tablePicker })),
+    group('Page elements', stack(small('tableOfContents', 'list-tree', 'Table of contents', { showLabel: true }), small('caption', 'captions', 'Inline caption', { showLabel: true }), small('footnote', 'superscript', 'Footnote', { showLabel: true })), stack(small('headerFooter', 'panel-top', 'Header & footer', { showLabel: true }), small('pageNumbers', 'hash', 'Page numbers', { showLabel: true }), small('watermark', 'stamp', 'Watermark', { showLabel: true })), large('editElement', 'pencil', 'Edit element')),
     group('Links & symbols', large('link', 'link', 'Link'), large(null, 'omega', 'Symbol', { menu: true, tip: 'Symbol', desc: 'Em dashes, curly quotes, accented letters and other special characters.', onClick: symbolPicker })),
     group('Snippets', large(null, 'text-cursor-input', 'Snippets', { menu: true, tip: 'Snippets', desc: 'Insert a saved text block. Tip: type / and a trigger such as /sig right in your text.', onClick: snippetMenu })),
     group('Chapters', large('newChapter', 'book-plus', 'New chapter')),
@@ -324,6 +325,7 @@ function buildTable() {
     group('Cells', stack(t('mergeCells', 'merge', 'Merge cells'), t('splitCell', 'split', 'Split cell'))),
     group('Headers', stack(t('toggleHeaderRow', 'panel-top', 'Header row'), t('toggleHeaderColumn', 'panel-left', 'Header column'))),
     group('Table', large(null, 'trash-2', 'Delete table', { tip: 'Delete the whole table', onClick: () => withEditor((c) => c.deleteTable().run()) })),
+    group('Appearance', large('tableOptions', 'palette', 'Table appearance')),
   ];
 }
 

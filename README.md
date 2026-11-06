@@ -14,9 +14,15 @@ Books are saved as `.moopress` files because funny, but MooPress also opens and 
 
 Each Heading 1 in an opened document becomes a chapter. MooPress also keeps a recovery copy, so you don't lose work if it closes unexpectedly.
 
+Books open on the title page. Click a chapter once to jump to it, or scroll through the whole manuscript. Title page pictures can be resized, aligned, captioned, replaced and moved above or below the title details.
+
+The Insert tab includes tables, automatic contents, captions, footnotes, headers, footers, watermarks and page numbers. Double-click a contents block, caption or footnote reference to edit it. Footnote text appears below its chapter. Click inside a table and use the Table tab for rows, columns, cells and appearance. Right-click in a chapter, then click the center dots to expand another ring of tools.
+
+Save as `.moopress` to keep every element's editing options. Word, OpenDocument and RTF copies retain contents, captions and notes as regular text. PDF and web exports keep their appearance.
+
 ## Install
 
-1. Download **MooPress Setup 0.1.0.exe** from the [Releases page](https://github.com/MooCalf/MooPress-/releases/latest)
+1. Download the latest **MooPress Setup** installer from the [Releases page](https://github.com/MooCalf/MooPress-/releases/latest)
 2. Run it and pick an install location
 3. You're done! A desktop and Start Menu shortcut are created automatically.
 
@@ -39,6 +45,8 @@ npm start                # build and run the app
 npm run dist             # build the Windows installer into release/
 npm run icons            # rebuild the app icons from src/Logo
 npm run register-files   # add MooPress to "Open with" without installing (see below)
+npm test                 # run editor integration checks in a hidden Electron window
+npm run test:built       # check the built desktop app after npm run build
 ```
 
 ## Disclaimer:

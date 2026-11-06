@@ -5,6 +5,9 @@ import { createProject, newChapter, pageDims, EMPTY_DOC } from '../project.js';
 import { buildBookHTML } from '../exporter.js';
 import { rtfToHtml, bookToRtf } from './rtf.js';
 import { odtToHtml, bookToOdt } from './odt.js';
+import { contentsEntries } from '../extensions/pageElements.js';
+import { titleArtworkHTML } from '../titleArtwork.js';
+import { noteLabel } from '../pageElements.js';
 
 export const FORMAT_NAMES = {
   moopress: 'MooPress Book', docx: 'Word Document', docm: 'Word Macro-Enabled Document', dotx: 'Word Template', dotm: 'Word Template',
@@ -15,9 +18,9 @@ export const FORMAT_NAMES = {
 export const WRITABLE = ['moopress', 'docx', 'odt', 'rtf', 'txt', 'md', 'html', 'htm', 'pdf'];
 
 export const FORMAT_LIMITS = {
-  docx: 'Chapters, formatting, pictures, tables and page size are kept.',
-  odt: 'Chapters, formatting, pictures, tables and page size are kept.',
-  rtf: 'Chapters, basic formatting and pictures are kept; tables become plain text.',
+  docx: 'Chapters, formatting, pictures, tables and page size are kept. Contents, captions and notes become regular text; keep a MooPress copy to edit their options.',
+  odt: 'Chapters, formatting, pictures, tables and page size are kept. Contents, captions and notes become regular text; keep a MooPress copy to edit their options.',
+  rtf: 'Chapters, basic formatting and pictures are kept; tables, contents, captions and notes become regular text.',
   txt: 'Only the words are kept — no formatting or pictures.',
   md: 'Chapters, headings, bold/italic, lists and links are kept; layout is not.',
   html: 'Everything shows as a web page, but it can’t store MooPress settings.',
@@ -217,9 +220,34 @@ function bookData() {
     title: p.title,
     subtitle: p.subtitle,
     author: p.author,
+    titleImages: p.titleImages,
     layout: { ...p.layout, pageWidth: w, pageHeight: h },
-    chapters: p.chapters.map((c) => ({ title: c.title, doc: chapterDoc(c.id).toJSON() })),
+    chapters: p.chapters.map((c) => ({ title: c.title, doc: portableDocument(chapterDoc(c.id).toJSON(), p) })),
   };
+}
+
+function portableDocument(doc, project) {
+  const notes = [];
+  const paragraph = (text, attrs = {}) => ({ type: 'paragraph', attrs, ...(text ? { content: [{ type: 'text', text }] } : {}) });
+  const convert = (node) => {
+    if (node.type === 'footnote') {
+      const label = noteLabel(node.attrs, notes.length);
+      notes.push(paragraph(`[${label}] ${node.attrs.text}`));
+      return [{ type: 'text', text: `[${label}]` }];
+    }
+    if (node.type === 'pageElement') {
+      const attrs = node.attrs;
+      if (attrs.kind === 'toc') return [
+        { type: 'heading', attrs: { level: 2 }, content: [{ type: 'text', text: attrs.label || 'Contents' }] },
+        ...contentsEntries(project, attrs.depth, attrs.chapters).map((entry) => paragraph(entry.title)),
+      ];
+      return [paragraph([attrs.label, attrs.text].filter(Boolean).join(' '), { textAlign: attrs.align })];
+    }
+    return [{ ...node, ...(node.content ? { content: node.content.flatMap(convert) } : {}) }];
+  };
+  const converted = convert(doc)[0];
+  converted.content.push(...notes);
+  return converted;
 }
 
 function portableHtml(book, images) {
@@ -227,9 +255,11 @@ function portableHtml(book, images) {
   const pageBreak = '<div class="page-break" style="page-break-after: always;"></div>';
   const parts = [];
   if (book.layout.includeTitlePage) {
+    parts.push(titleArtworkHTML(book, 'above'));
     parts.push(`<p style="text-align:center"><strong><span style="font-size:28pt">${esc(book.title || 'Untitled Book')}</span></strong></p>`);
     if (book.subtitle) parts.push(`<p style="text-align:center"><em>${esc(book.subtitle)}</em></p>`);
     if (book.author) parts.push(`<p style="text-align:center">by ${esc(book.author)}</p>`);
+    parts.push(titleArtworkHTML(book, 'below'));
   }
   book.chapters.forEach((ch, i) => {
     if (i > 0 || book.layout.includeTitlePage) if (book.layout.chapterNewPage || i === 0) parts.push(pageBreak);
@@ -253,7 +283,13 @@ function portableHtml(book, images) {
     if (ch.title) parts.push(`<h1>${esc(ch.title)}</h1>`);
     parts.push(div.innerHTML);
   });
-  return parts.join('');
+  const result = document.createElement('div');
+  result.innerHTML = parts.join('');
+  result.querySelectorAll('.title-art img').forEach((img) => {
+    const raster = images.get(img.getAttribute('src'));
+    if (raster) { img.src = raster.dataUrl; img.width = Math.round(raster.widthPx); img.height = Math.round(raster.heightPx); }
+  });
+  return result.innerHTML;
 }
 
 function bookToText(book) {
@@ -288,7 +324,9 @@ export async function exportPayload(ext) {
   if (ext === 'html' || ext === 'htm' || ext === 'pdf') return { html: buildBookHTML() };
   const book = bookData();
   if (ext === 'txt') return { text: bookToText(book) };
-  const images = await rasterizeImages(book.chapters.map((c) => c.doc));
+  const contentWidth = (book.layout.pageWidth - book.layout.margins.left - book.layout.margins.right) * 96;
+  const artwork = (book.titleImages || []).map((image) => ({ type: 'image', attrs: { src: image.src, width: contentWidth * image.width / 100 } }));
+  const images = await rasterizeImages([...book.chapters.map((c) => c.doc), ...artwork]);
   if (ext === 'rtf') return { text: bookToRtf(book, images) };
   if (ext === 'odt') return { bytes: await bookToOdt(book, images) };
   const html = portableHtml(book, images);

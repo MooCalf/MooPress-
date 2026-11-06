@@ -1,5 +1,6 @@
 import { Editor } from '@tiptap/core';
-import { EditorState } from '@tiptap/pm/state';
+import { EditorState, TextSelection } from '@tiptap/pm/state';
+import { DOMSerializer } from '@tiptap/pm/model';
 import StarterKit from '@tiptap/starter-kit';
 import { TextStyle, Color, FontFamily, FontSize } from '@tiptap/extension-text-style';
 import Highlight from '@tiptap/extension-highlight';
@@ -9,14 +10,17 @@ import Superscript from '@tiptap/extension-superscript';
 import { Table, TableRow, TableHeader, TableCell } from '@tiptap/extension-table';
 import Typography from '@tiptap/extension-typography';
 import { Placeholder, CharacterCount } from '@tiptap/extensions';
-import { app, emit, markDirty } from './app.js';
+import { app, emit, markDirty, h, on } from './app.js';
 import { EMPTY_DOC } from './project.js';
 import { PageBreak, SceneBreak } from './extensions/breaks.js';
 import { ParagraphFormat } from './extensions/paragraphFormat.js';
 import { BookImage, ImageDropPaste } from './extensions/bookImage.js';
 import { EditorDecorations } from './extensions/decorations.js';
+import { PageElement, Footnote } from './extensions/pageElements.js';
+import { TableStyle, BookTableView } from './extensions/tableStyle.js';
 
 const chapterStates = new Map();
+let editorMount;
 
 export function buildExtensions({ smartQuotes = true } = {}) {
   return [
@@ -35,10 +39,11 @@ export function buildExtensions({ smartQuotes = true } = {}) {
     TextAlign.configure({ types: ['heading', 'paragraph'] }),
     Subscript,
     Superscript,
-    Table.configure({ resizable: true, cellMinWidth: 40 }),
+    Table.configure({ resizable: true, cellMinWidth: 40, View: BookTableView }),
     TableRow,
     TableHeader,
     TableCell,
+    TableStyle,
     smartQuotes && Typography,
     Placeholder.configure({ placeholder: 'Start writing… (everything you type is kept in this chapter)' }),
     CharacterCount,
@@ -48,10 +53,13 @@ export function buildExtensions({ smartQuotes = true } = {}) {
     BookImage.configure({ allowBase64: true }),
     ImageDropPaste,
     EditorDecorations,
+    PageElement,
+    Footnote,
   ].filter(Boolean);
 }
 
 export function createEditor(element) {
+  editorMount = element;
   app.editor = new Editor({
     element,
     extensions: buildExtensions({ smartQuotes: app.settings.smartQuotes }),
@@ -113,9 +121,17 @@ export function syncChapters() {
   }
 }
 
-export function openView(id) {
+export function openView(id, { scroll = true } = {}) {
   const { editor } = app;
-  if (app.view === id) return;
+  const canvas = document.getElementById('canvas');
+  const previousScroll = canvas.scrollTop;
+  const anchor = id === 'title' ? document.getElementById('title-page') : [...document.querySelectorAll('.chapter-paper')].find((paper) => paper.dataset.chapterId === id);
+  const previousTop = anchor?.getBoundingClientRect().top;
+  if (id !== 'title' && !app.project.chapters.some((ch) => ch.id === id)) return;
+  if (app.view === id) {
+    if (scroll) scrollToView(id);
+    return;
+  }
   if (app.view && app.view !== 'title') {
     chapterStates.set(app.view, editor.state);
     const prev = activeChapter();
@@ -127,9 +143,97 @@ export function openView(id) {
     chapterStates.delete(id);
     editor.view.updateState(state);
   }
+  renderManuscript();
   emit('view-changed');
   emit('selection-changed');
+  if (scroll) scrollToView(id);
+  else if (previousTop != null && anchor?.isConnected) canvas.scrollTop = previousScroll + anchor.getBoundingClientRect().top - previousTop;
 }
+
+function scrollToView(id) {
+  const target = id === 'title' ? document.getElementById('title-page') : document.getElementById('paper');
+  const canvas = document.getElementById('canvas');
+  if (!target || !canvas) return;
+  const top = target.getBoundingClientRect().top - canvas.getBoundingClientRect().top + canvas.scrollTop - 32;
+  canvas.scrollTop = Math.max(0, top);
+}
+
+export function renderManuscript() {
+  if (!app.project || !editorMount) return;
+  const root = document.getElementById('zoom-layer');
+  const titlePage = document.getElementById('title-page');
+  if (root.firstElementChild !== titlePage) root.prepend(titlePage);
+  titlePage.hidden = false;
+  const ids = new Set(app.project.chapters.map((ch) => ch.id));
+  for (const paper of root.querySelectorAll('.chapter-paper')) {
+    if (!ids.has(paper.dataset.chapterId)) {
+      if (paper.contains(editorMount)) root.append(editorMount);
+      paper.remove();
+    }
+  }
+  const original = root.querySelector('#paper:not(.chapter-paper)');
+  if (original) { root.append(editorMount); original.remove(); }
+  let previousPaper = titlePage;
+  for (const ch of app.project.chapters) {
+    let paper = [...root.querySelectorAll('.chapter-paper')].find((el) => el.dataset.chapterId === ch.id);
+    if (!paper) {
+      const input = h('input.chapter-title', { placeholder: 'Chapter title', value: ch.title, 'aria-label': 'Chapter title', spellcheck: 'true' });
+      input.addEventListener('input', () => {
+        ch.title = input.value; markDirty(); emit('chapters-changed');
+      });
+      input.addEventListener('keydown', (e) => {
+        if (e.key === 'Enter' || e.key === 'ArrowDown') { e.preventDefault(); app.editor.commands.focus('start'); }
+      });
+      paper = h('article.paper.chapter-paper', { dataset: { chapterId: ch.id } },
+        h('div.hf-preview.hf-header'), h('div.chapter-head', {}, input), h('div.chapter-preview.manuscript'),
+        h('div.chapter-notes'), h('div.page-overlay', { 'aria-hidden': 'true' }), h('div.hf-preview.hf-footer'));
+      paper.addEventListener('mousedown', (e) => {
+        if (app.view === ch.id) return;
+        const text = e.target.closest('.chapter-preview');
+        openView(ch.id, { scroll: false });
+        if (text) {
+          e.preventDefault();
+          const hit = app.editor.view.posAtCoords({ left: e.clientX, top: e.clientY });
+          if (hit) app.editor.view.dispatch(app.editor.state.tr.setSelection(TextSelection.near(app.editor.state.doc.resolve(hit.pos))));
+          app.editor.view.focus();
+        }
+      });
+      paper.addEventListener('focusin', () => { if (app.view !== ch.id) openView(ch.id, { scroll: false }); });
+    }
+    paper.removeAttribute('id');
+    for (const el of paper.querySelectorAll('[id]')) if (el !== editorMount) el.removeAttribute('id');
+    const active = app.view === ch.id;
+    paper.classList.toggle('active-chapter', active);
+    const input = paper.querySelector('.chapter-title');
+    if (document.activeElement !== input) input.value = ch.title;
+    const preview = paper.querySelector('.chapter-preview');
+    preview.hidden = active;
+    if (active) {
+      paper.id = 'paper';
+      paper.querySelector('.chapter-head').id = 'chapter-head';
+      input.id = 'chapter-title';
+      paper.querySelector('.hf-header').id = 'header-preview';
+      paper.querySelector('.hf-footer').id = 'footer-preview';
+      paper.querySelector('.page-overlay').id = 'page-overlay';
+      if (preview.nextElementSibling !== editorMount) preview.after(editorMount);
+      editorMount.hidden = false;
+    } else {
+      preview.replaceChildren(DOMSerializer.fromSchema(app.editor.schema).serializeFragment(chapterDoc(ch.id).content));
+    }
+    if (previousPaper.nextElementSibling !== paper) previousPaper.after(paper);
+    previousPaper = paper;
+  }
+  if (app.view === 'title') { editorMount.hidden = true; root.append(editorMount); }
+  emit('manuscript-rendered');
+}
+
+on('chapters-changed', renderManuscript);
+on('doc-changed', () => {
+  for (const paper of document.querySelectorAll('.chapter-paper')) {
+    if (paper.dataset.chapterId === app.view) continue;
+    paper.querySelector('.chapter-preview').replaceChildren(DOMSerializer.fromSchema(app.editor.schema).serializeFragment(chapterDoc(paper.dataset.chapterId).content));
+  }
+});
 
 export function forgetChapter(id) {
   chapterStates.delete(id);
@@ -138,6 +242,11 @@ export function forgetChapter(id) {
 export function resetChapterStates() {
   chapterStates.clear();
   app.view = null;
+  if (editorMount) {
+    document.getElementById('zoom-layer').append(editorMount);
+    document.querySelectorAll('.chapter-paper').forEach((paper) => paper.remove());
+  }
+  if (app.editor) app.editor.view.updateState(stateFromJson(EMPTY_DOC));
 }
 
 export function focusEditor() {

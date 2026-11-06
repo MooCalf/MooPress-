@@ -310,7 +310,7 @@ kbd {
   cursor: text;
   color-scheme: light;
 }
-#paper, #tm-paper {
+.chapter-paper, #paper, #tm-paper {
   font-family: var(--body-font, Georgia, serif);
   font-size: var(--body-size, 12pt);
   line-height: var(--body-leading, 1.5);
@@ -327,8 +327,8 @@ kbd {
 .hf-center { text-align: center; }
 .hf-right { text-align: right; }
 
-#chapter-head { margin-bottom: 0.4in; }
-#chapter-title {
+.chapter-head, #chapter-head { margin-bottom: 0.4in; }
+.chapter-title, #chapter-title {
   width: 100%;
   border: 0; outline: none; background: transparent;
   font-family: var(--body-font, Georgia, serif);
@@ -337,9 +337,9 @@ kbd {
   padding: 4px 0;
   border-bottom: 1px dashed transparent;
 }
-#chapter-title:hover { border-bottom-color: #ddd8d0; }
-#chapter-title:focus { border-bottom-color: var(--accent); }
-#chapter-title::placeholder { color: #c4beb5; }
+.chapter-title:hover { border-bottom-color: #ddd8d0; }
+.chapter-title:focus { border-bottom-color: var(--accent); }
+.chapter-title::placeholder { color: #c4beb5; }
 
 .manuscript {
   outline: none;
@@ -385,7 +385,7 @@ kbd {
 .page-break.ProseMirror-selectednode, .scene-break.ProseMirror-selectednode { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 2px; }
 
 .manuscript table { border-collapse: collapse; width: 100%; margin: 0.8em 0; table-layout: fixed; font-size: 0.92em; overflow: hidden; }
-.manuscript td, .manuscript th { border: 1px solid #b9b2a8; padding: 4px 8px; vertical-align: top; position: relative; min-width: 40px; }
+.manuscript td, .manuscript th { border: 1px solid var(--table-border, #b9b2a8); padding: 4px 8px; vertical-align: top; position: relative; min-width: 40px; }
 .manuscript th { background: #f2efea; font-weight: 600; text-align: left; }
 .manuscript .selectedCell::after { content: ''; position: absolute; inset: 0; background: rgba(44, 95, 158, 0.15); pointer-events: none; }
 .manuscript .column-resize-handle { position: absolute; right: -2px; top: 0; bottom: -2px; width: 4px; background: var(--accent); pointer-events: none; }
@@ -415,7 +415,7 @@ kbd {
 .proof-grammar { text-decoration-color: var(--grammar); }
 .proof-style { text-decoration-color: var(--style); text-decoration-style: dotted; text-decoration-thickness: 2px; }
 
-#page-overlay { position: absolute; inset: 0; pointer-events: none; }
+.page-overlay, #page-overlay { position: absolute; inset: 0; pointer-events: none; }
 .page-guide { position: absolute; left: 0; right: 0; height: 0; border-top: 1px dashed #d6d0c7; }
 .page-guide.forced { border-top-color: transparent; }
 .page-guide-label {

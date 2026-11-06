@@ -3,6 +3,8 @@ import { app, escapeHtml } from './app.js';
 import { chapterDoc, syncChapters } from './editor.js';
 import { pageDims, fillTokens } from './project.js';
 import { fontStack } from './layout.js';
+import { titleArtworkHTML } from './titleArtwork.js';
+import { footnotes, noteLabel } from './pageElements.js';
 
 const cssString = (s) => `"${String(s).replace(/\\/g, '\\\\').replace(/"/g, '\\"').replace(/[\r\n]+/g, ' ')}"`;
 
@@ -45,6 +47,10 @@ export function buildBookHTML() {
   const toHtml = (doc) => {
     const div = document.createElement('div');
     div.append(serializer.serializeFragment(doc.content));
+    const notes = footnotes(doc);
+    const references = [...div.querySelectorAll('[data-footnote]')];
+    notes.forEach((note, index) => { const ref = references[index]; if (ref) ref.querySelector('a').textContent = noteLabel(note, index); });
+    if (notes.length) div.insertAdjacentHTML('beforeend', `<aside class="chapter-notes" aria-label="Footnotes">${notes.map((note, index) => `<p id="note-${escapeHtml(note.id)}"><sup>${escapeHtml(noteLabel(note, index))}</sup> ${escapeHtml(note.text).replace(/\n/g, '<br>')}</p>`).join('')}</aside>`);
     return div.innerHTML;
   };
   const boxes = marginBoxes(L, p);
@@ -52,16 +58,18 @@ export function buildBookHTML() {
 
   const titlePage = L.includeTitlePage
     ? `<section class="title-page">
+        ${titleArtworkHTML(p, 'above')}
         <h1 class="book-title">${escapeHtml(title)}</h1>
         ${p.subtitle ? `<p class="book-subtitle">${escapeHtml(p.subtitle)}</p>` : ''}
         ${p.author ? `<p class="book-author">${escapeHtml(p.author)}</p>` : ''}
+        ${titleArtworkHTML(p, 'below')}
       </section>
       ${p.dedication?.trim() ? `<section class="dedication"><p>${escapeHtml(p.dedication).replace(/\n/g, '<br>')}</p></section>` : ''}`
     : '';
 
   const chapters = p.chapters
     .map(
-      (ch, i) => `<section class="chapter${i === 0 && !L.includeTitlePage ? ' first' : ''}">
+      (ch, i) => `<section id="chapter-${escapeHtml(ch.id)}" class="chapter${i === 0 && !L.includeTitlePage ? ' first' : ''}">
         ${ch.title ? `<h1 class="chapter-title">${escapeHtml(ch.title)}</h1>` : ''}
         <div class="chapter-body">${toHtml(chapterDoc(ch.id))}</div>
       </section>`,
@@ -106,11 +114,26 @@ a { color: inherit; }
 mark { padding: 0 1px; }
 img { max-width: 100%; break-inside: avoid; }
 table { border-collapse: collapse; width: 100%; margin: 0.8em 0; break-inside: auto; font-size: 0.92em; }
-td, th { border: 1px solid #999; padding: 4px 8px; vertical-align: top; }
+td, th { border: 1px solid var(--table-border, #999); padding: 4px 8px; vertical-align: top; }
 th { background: #f0eeeb; font-weight: 600; }
 .scene-break { text-align: center; margin: 1em 0; break-after: avoid; }
 .scene-break::before { content: attr(data-symbol); letter-spacing: 0.2em; }
 .page-break { break-after: page; height: 0; margin: 0; border: 0; }
+.book-element { break-inside: avoid; }
+.book-contents { margin: 1em 0 2em; }
+.book-contents h2 { font-size: 1.5em; }
+.book-contents ol { list-style: none; padding-left: 0; }
+.book-contents li { padding: 0.2em 0; }
+.book-contents a { text-decoration: none; }
+.inline-caption { text-indent: 0; margin: 0.5em 0 1em; }
+.chapter-notes { border-top: 1px solid #aaa; margin-top: 2em; padding-top: 0.5em; font-size: 9pt; }
+.chapter-notes p { text-indent: 0; margin-bottom: 0.4em; }
+.footnote-reference { font-size: 0.75em; }
+.title-art { margin-top: 0; margin-bottom: 0.3in; break-inside: avoid; }
+.title-art img { display: block; }
+.title-art figcaption { font-size: 10pt; margin-top: 0.3em; }
+.book-watermark { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; pointer-events: none; z-index: 10; }
+.book-watermark span { transform: rotate(${Number(L.watermark.angle) || 0}deg); font-size: ${Number(L.watermark.size) || 60}pt; opacity: ${Number(L.watermark.opacity) || 0.12}; color: ${L.watermark.color}; white-space: nowrap; }
 @media screen {
   body { background: #e9e6e1; padding: 32px 0; }
   .title-page, .dedication, .chapter { width: ${w}in; max-width: 100%; margin: 0 auto 32px; padding: ${m.top}in ${m.right}in ${m.bottom}in ${m.left}in; background: #fff; box-shadow: 0 2px 12px rgba(0,0,0,.12); }
@@ -119,6 +142,7 @@ th { background: #f0eeeb; font-weight: 600; }
 </style>
 </head>
 <body>
+${L.watermark.text ? `<div class="book-watermark" aria-hidden="true"><span>${escapeHtml(L.watermark.text)}</span></div>` : ''}
 ${titlePage}
 ${chapters}
 </body>

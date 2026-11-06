@@ -14,7 +14,7 @@ export function loadProject(data, filePath) {
   app.project = normalizeProject(data);
   app.filePath = filePath || null;
   resetChapterStates();
-  openView(app.project.chapters[0].id);
+  openView('title');
   markClean();
   lastSaveAt = Date.now();
   emit('project-loaded');

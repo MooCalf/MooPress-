@@ -177,9 +177,15 @@ export async function bookToOdt(book, images) {
   };
 
   if (L.includeTitlePage) {
+    const artwork = (position) => (book.titleImages || []).filter((image) => image.position === position).forEach((image) => {
+      out.push(`<text:p text:style-name="${pStyle(image.align)}">${inline([{ type: 'image', attrs: { src: image.src } }])}</text:p>`);
+      if (image.caption) out.push(`<text:p text:style-name="${pStyle(image.align)}">${esc(image.caption)}</text:p>`);
+    });
+    artwork('above');
     out.push(`<text:p text:style-name="Title">${esc(book.title || 'Untitled Book')}</text:p>`);
     if (book.subtitle) out.push(`<text:p text:style-name="Subtitle">${esc(book.subtitle)}</text:p>`);
     if (book.author) out.push(`<text:p text:style-name="${pStyle('center')}">by ${esc(book.author)}</text:p>`);
+    artwork('below');
     breakNext = true;
   }
   book.chapters.forEach((ch, idx) => {

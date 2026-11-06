@@ -257,7 +257,7 @@ function renderAbout(body) {
       null,
       h('p', {}, 'MooPress is a word processor built for book authors: chapters, title pages, book page sizes, scene breaks and print-ready PDFs.'),
       h('p.settings-note', {}, icon('folder'), 'Books are saved as .moopress files. MooPress also opens and saves Word (.docx, .doc), PDF, OpenDocument (.odt), Rich Text (.rtf), plain text and Markdown files. Settings and recovery copies are stored in your Windows user profile.'),
-      h('p', {}, h('small', {}, 'Version 0.1.0')),
+      h('p', {}, h('small', {}, 'Version 0.1.1')),
     ),
   );
 }

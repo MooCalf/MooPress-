@@ -245,9 +245,15 @@ export function bookToRtf(book, images) {
   };
 
   if (L.includeTitlePage) {
+    const artwork = (position) => (book.titleImages || []).filter((image) => image.position === position).forEach((image) => {
+      para(inline([{ type: 'image', attrs: { src: image.src } }]), { align: image.align });
+      if (image.caption) para(rtfText(image.caption), { align: image.align });
+    });
+    artwork('above');
     para(`{\\b\\fs56 ${rtfText(book.title || 'Untitled Book')}}`, { align: 'center' });
     if (book.subtitle) para(`{\\i\\fs32 ${rtfText(book.subtitle)}}`, { align: 'center' });
     if (book.author) para(`\\fs28 by ${rtfText(book.author)}`, { align: 'center' });
+    artwork('below');
     breakNext = true;
   }
   book.chapters.forEach((ch, idx) => {

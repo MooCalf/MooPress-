@@ -5,7 +5,6 @@ import { registerActions } from './actions.js';
 import { actions, bindingFor, formatCombo, rebuildKeymap, initShortcutDispatcher } from './keybinds.js';
 import { createEditor, activeChapter, focusEditor } from './editor.js';
 import { buildRibbon } from './ribbon.js';
-import { setChapterTitle } from './sidebar.js';
 import { renderStatusbar } from './statusbar.js';
 import { applyLayout, schedulePageGuides } from './layout.js';
 import { loadProject, offerRecovery, startBackgroundSaving, openBook, fileFormat } from './fileops.js';
@@ -14,6 +13,8 @@ import { logoIcon } from './assets.js';
 import { startTour } from './features/tour.js';
 import { createProject, bookName } from './project.js';
 import { initTooltips, refreshIcons } from './ui.js';
+import { initTitleArtwork } from './titleArtwork.js';
+import { initPageElements } from './pageElements.js';
 import { applyTheme, initZoom, applySidebar, applyRibbonCollapsed } from './view.js';
 import './proofing.js';
 import './find.js';
@@ -26,6 +27,7 @@ import { initFocusPalette } from './features/focusPalette.js';
 import { initRadialMenu } from './features/radialMenu.js';
 import { initBible } from './features/bible.js';
 import { applyTypewriter } from './features/typewriter.js';
+import './manuscript.css';
 
 const $ = (id) => document.getElementById(id);
 
@@ -66,28 +68,15 @@ function fillTitlePage() {
   requestAnimationFrame(() => { autosize($('tp-title')); autosize($('tp-dedication')); });
 }
 
-function wireChapterTitle() {
-  const input = $('chapter-title');
-  input.addEventListener('input', () => setChapterTitle(app.view, input.value));
-  input.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === 'ArrowDown') {
-      e.preventDefault();
-      app.editor.commands.focus('start');
-    }
-  });
-}
-
 function showView() {
   const isTitle = app.view === 'title';
-  $('paper').hidden = isTitle;
-  $('title-page').hidden = !isTitle;
+  $('title-page').hidden = false;
   if (isTitle) {
     fillTitlePage();
     if (!app.project.title) requestAnimationFrame(() => $('tp-title').focus());
   } else {
     const ch = activeChapter();
     if (document.activeElement !== $('chapter-title')) $('chapter-title').value = ch?.title || '';
-    $('canvas').scrollTop = 0;
     schedulePageGuides();
   }
 }
@@ -157,6 +146,8 @@ async function boot() {
   initFocusPalette();
   initRadialMenu();
   initBible();
+  initTitleArtwork();
+  initPageElements();
   applyTypewriter();
 
   on('project-loaded', () => {
@@ -180,7 +171,6 @@ async function boot() {
   initZoom();
   initTooltips(tooltipFor);
   wireTitlePage();
-  wireChapterTitle();
   wireTopbar();
   wireCanvas();
   $('brand-logo').src = logoIcon;
